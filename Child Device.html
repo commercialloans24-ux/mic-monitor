@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CHILD - Secure Broadcaster</title>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <style>
+        body { font-family: sans-serif; text-align: center; padding: 40px; background: #fff5f5; }
+        .box { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); display: inline-block; }
+        #my-id { font-size: 1.2rem; font-weight: bold; color: #ff4757; background: #f8f9fa; padding: 10px; border-radius: 8px; margin: 15px 0; word-break: break-all; }
+        .btn-green { display: none; padding: 15px 30px; background: #28a745; color: white; border: none; border-radius: 8px; font-size: 1.1rem; cursor: pointer; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="box">
+        <h2>Child Device</h2>
+        <p>Your Secure ID:</p>
+        <div id="my-id">Creating connection...</div>
+        <p id="msg">Waiting for Parent to request audio...</p>
+        <button id="auth-btn" class="btn-green" onclick="startMic()">START BROADCASTING</button>
+    </div>
+
+    <script>
+        const peer = new Peer({ config: {'iceServers': [{ 'urls': 'stun:stun.l.google.com:19302' }]} });
+        let parentID;
+
+        peer.on('open', (id) => { 
+            document.getElementById('my-id').innerText = id; 
+        });
+
+        // Step 1: Handle Handshake
+        peer.on('connection', (conn) => {
+            parentID = conn.peer;
+            document.getElementById('msg').innerText = "Parent is requesting to listen!";
+            document.getElementById('auth-btn').style.display = "block";
+        });
+
+        // Step 2: Satisfy security with a click
+        async function startMic() {
+            if (location.protocol !== 'https:' && location.hostname !== 'localhost') {
+                alert("ERROR: Microphones require HTTPS! This code will not work on HTTP.");
+                return;
+            }
+
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                peer.call(parentID, stream);
+                document.getElementById('auth-btn').style.display = "none";
+                document.getElementById('msg').innerText = "🔊 STREAMING LIVE TO PARENT";
+                document.getElementById('msg').style.color = "green";
+            } catch (err) {
+                alert("Mic access error: " + err.name);
+            }
+        }
+    </script>
+</body>
+</html>
